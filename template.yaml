@@ -1,0 +1,61 @@
+  
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: flip it app infrastructure
+
+Parameters:
+  UserPool:
+    Type: String
+    Description: User pool ID
+  DomainName:
+    Type: String
+    Description: Domain Name
+  Certificate:
+    Type: String
+    Description: ACM Certificate
+
+Resources:
+  AppsUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      EmailConfiguration:
+        EmailSendingAccount: COGNITO_DEFAULT
+      UsernameAttributes: email
+      UserPoolName: apps_user_pool
+      Schema:
+        - Name: email
+          AttributeDataType: String
+          Mutable: false
+          Required: true
+
+  FlipPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: apps-pool-client
+      AllowedOAuthFlows: code
+      AllowedOAuthScopes:
+        - email
+        - openid
+      CallbackURLs:
+        - "https://flip.mauridev.net"
+      LogoutURLs:
+        - "https://flip.mauridev.net"
+      RefreshTokenValidity: 30
+      SupportedIdentityProviders:
+        - COGNITO
+        - Google
+      GenerateSecret: false
+      UserPoolId: !Ref UserPool
+      WriteAttributes:
+        - email
+      ReadAttributes:
+        - email
+    
+  AppsUserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: "mauri.apps"
+      UserPoolId: !Ref UserPool
+
+
+
