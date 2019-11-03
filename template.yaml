@@ -12,8 +12,15 @@ Parameters:
     Description: ACM Certificate
   CallbackURL:
     Type: String
+  UsersBucket:
+    Type: String
 
 Resources:
+  AppsUsersBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref UsersBucket
+
   AppsUserPool:
     Type: AWS::Cognito::UserPool
     Properties:
@@ -50,12 +57,63 @@ Resources:
         - email
       ReadAttributes:
         - email
-    
+
   AppsUserPoolDomain:
     Type: AWS::Cognito::UserPoolDomain
     Properties:
       Domain: "mauri-apps"
       UserPoolId: !Ref AppsUserPool
 
+  AppsIdentityPool:
+    Type: AWS::Cognito::IdentityPool
+    Properties:
+      IdentityPoolName: apps-identity-pool
+      AllowUnauthenticatedIdentities: false
+      CognitoIdentityProviders:
+        - ClientId: !Ref AppsPoolClient
+          ProviderName: !GetAtt AppsUserPool.ProviderName
 
+  AppsCognitoAuthorizedRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Federated: "cognito-identity.amazonaws.com"
+            Action:
+              - "sts:AssumeRoleWithWebIdentity"
+            Condition:
+              StringEquals:
+                "cognito-identity.amazonaws.com:aud": !Ref AppsIdentityPool
+              "ForAnyValue:StringLike":
+                "cognito-identity.amazonaws.com:amr": authenticated
+      Policies:
+        - PolicyName: "CognitoAuthorizedPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource: !Join ['', ['arn:aws:s3:::', !Ref AppsUsersBucket]]
+                Condition:
+                  StringLike:
+                    "s3:prefix":
+                      - "${cognito-identity.amazonaws.com:sub}"
+              - Effect: "Allow"
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                Resource:
+                  - !Join ['', ['arn:aws:s3:::', !Ref AppsUsersBucket, "/${cognito-identity.amazonaws.com:sub}"]]
+                  - !Join ['', ['arn:aws:s3:::', !Ref AppsUsersBucket, "/${cognito-identity.amazonaws.com:sub}/*"]]
 
+  AppsIdentityPoolRoleMapping:
+    Type: AWS::Cognito::IdentityPoolRoleAttachment
+    Properties:
+      IdentityPoolId: !Ref AppsIdentityPool
+      Roles:
+        authenticated: !GetAtt AppsCognitoAuthorizedRole.Arn
