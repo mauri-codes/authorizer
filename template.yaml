@@ -31,6 +31,13 @@ Resources:
       UsernameAttributes:
         - email
       UserPoolName: "Mau Apps"
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 6
+          RequireLowercase: false
+          RequireNumbers: false
+          RequireSymbols: false
+          RequireUppercase: false
       Schema:
         - Name: email
           AttributeDataType: String
