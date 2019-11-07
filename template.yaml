@@ -31,6 +31,8 @@ Resources:
       UsernameAttributes:
         - email
       UserPoolName: "Mau Apps"
+      AutoVerifiedAttributes:
+        - email
       Policies:
         PasswordPolicy:
           MinimumLength: 6
@@ -50,11 +52,14 @@ Resources:
       ClientName: apps-pool-client
       AllowedOAuthFlows:
         - code
+        - implicit
+      AllowedOAuthFlowsUserPoolClient: true
       AllowedOAuthScopes:
         - email
         - openid
       CallbackURLs:
         - !Ref CallbackURL
+        - "http://localhost:4200/"
       LogoutURLs:
         - !Ref CallbackURL
       RefreshTokenValidity: 30
